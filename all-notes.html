@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>All Notes</title>
+  <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body {
+      background-image: url('red.jpg'); /* Default background image */
+      background-size: cover;
+      background-position: center center;
+      background-attachment: middle;
+      font-family: 'Arial', sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+
+    .notebook {
+      background-color: rgba(255, 255, 255, 0.7); /* Semi-transparent background for readability */
+      padding: 30px;
+      border-radius: 15px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+      max-width: 800px;
+      margin: 50px auto;
+    }
+
+    .notebook-header {
+      background-color: rgba(52, 58, 64, 0.9); /* Semi-transparent dark header */
+      color: white;
+      padding: 15px;
+      border-radius: 10px;
+      text-align: center;
+      font-weight: bold;
+      font-size: 1.8rem;
+    }
+
+    .note-item {
+      cursor: pointer;
+      margin: 5px;
+      background-color: rgba(248, 249, 250, 0.8); /* Semi-transparent note item */
+      padding: 10px;
+      border-radius: 5px;
+      font-weight: bold;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .note-actions {
+      display: flex;
+      gap: 10px; /* Space between buttons */
+    }
+
+    .delete-btn, .edit-btn {
+      background-color: #dc3545;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      padding: 5px 10px;
+      cursor: pointer;
+    }
+
+    .edit-btn {
+      background-color: #007bff; /* Blue for Edit */
+    }
+
+    .note-content, .edit-note-container {
+      margin-top: 20px;
+      padding: 15px;
+      background-color: rgba(248, 249, 250, 0.8); /* Semi-transparent content box */
+      border-radius: 10px;
+    }
+
+    .edit-note-container input, .edit-note-container textarea {
+      width: 100%;
+      margin-bottom: 10px;
+    }
+    
+    .save-edit-btn {
+      background-color: #28a745;
+      color: white;
+      border: none;
+      padding: 10px;
+      cursor: pointer;
+      width: 100%;
+    }
+
+    .choose-bg-btn {
+      margin-top: 15px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <div class="notebook">
+      <div class="notebook-header">
+        All Saved Notes
+      </div>
+
+      <div id="allNotesContainer">
+        <!-- All notes will be displayed here -->
+      </div>
+
+      <div id="noteContentDisplay" class="note-content" style="display:none;">
+        <!-- Full content of the clicked note will be displayed here -->
+      </div>
+
+      <div id="editNoteForm" class="edit-note-container" style="display:none;">
+        <h5>Edit Note</h5>
+        <input type="text" id="editNoteTitle" placeholder="Edit title" class="form-control">
+        <textarea id="editNoteContent" placeholder="Edit content" class="form-control" rows="5"></textarea>
+        <button id="saveEditBtn" class="save-edit-btn">Save Changes</button>
+      </div>
+
+      <!-- Choose background image section -->
+      <div class="form-group choose-bg-btn">
+        <label for="backgroundImage">Choose Background Image:</label>
+        <input type="file" id="backgroundImage" class="form-control">
+      </div>
+
+      <a href="index.html" class="btn btn-secondary mt-3">Back to Main Page</a>
+    </div>
+  </div>
+
+  <script>
+    // Load all notes from localStorage
+    function loadAllNotes() {
+      const savedNotes = JSON.parse(localStorage.getItem('notes')) || [];
+      const container = document.getElementById('allNotesContainer');
+      const noteContentDisplay = document.getElementById('noteContentDisplay');
+      const editNoteForm = document.getElementById('editNoteForm');
+      const saveEditBtn = document.getElementById('saveEditBtn');
+      let currentEditIndex = -1;
+
+      // Clear previous content
+      container.innerHTML = '';
+      noteContentDisplay.style.display = 'none';
+      editNoteForm.style.display = 'none';
+
+      // If no notes are saved
+      if (savedNotes.length === 0) {
+        container.innerHTML = '<p>No notes saved yet.</p>';
+      } else {
+        savedNotes.forEach((note, index) => {
+          const noteItem = document.createElement('div');
+          noteItem.classList.add('note-item');
+          noteItem.innerHTML = `${note.title} 
+            <div class="note-actions">
+              <button class="edit-btn" data-index="${index}">Edit</button>
+              <button class="delete-btn" data-index="${index}">Delete</button>
+            </div>`;
+
+          // Display full note content on click
+          noteItem.addEventListener('click', function() {
+            noteContentDisplay.style.display = 'block';
+            noteContentDisplay.innerHTML = `<h5>${note.title}</h5><p>${note.content}</p>`;
+          });
+
+          // Edit note functionality
+          const editBtn = noteItem.querySelector('.edit-btn');
+          editBtn.addEventListener('click', function(e) {
+            e.stopPropagation(); // Prevent the content display
+            currentEditIndex = index;
+            document.getElementById('editNoteTitle').value = note.title;
+            document.getElementById('editNoteContent').value = note.content;
+            editNoteForm.style.display = 'block'; // Show edit form
+          });
+
+          // Delete note functionality
+          const deleteBtn = noteItem.querySelector('.delete-btn');
+          deleteBtn.addEventListener('click', function(e) {
+            e.stopPropagation(); // Prevent the content display
+            deleteNoteFromLocalStorage(index);
+          });
+
+          container.appendChild(noteItem);
+        });
+      }
+
+      // Save edited note
+      saveEditBtn.addEventListener('click', function() {
+        const newTitle = document.getElementById('editNoteTitle').value;
+        const newContent = document.getElementById('editNoteContent').value;
+
+        if (newTitle && newContent && currentEditIndex !== -1) {
+          const savedNotes = JSON.parse(localStorage.getItem('notes')) || [];
+          savedNotes[currentEditIndex] = { title: newTitle, content: newContent };
+          localStorage.setItem('notes', JSON.stringify(savedNotes)); // Save to localStorage
+          loadAllNotes(); // Reload notes
+        }
+      });
+    }
+
+    // Function to delete a note from localStorage
+    function deleteNoteFromLocalStorage(index) {
+      const savedNotes = JSON.parse(localStorage.getItem('notes')) || [];
+      savedNotes.splice(index, 1); // Remove the note at the given index
+      localStorage.setItem('notes', JSON.stringify(savedNotes)); // Save back to localStorage
+      loadAllNotes(); // Reload notes
+    }
+
+    // Function to update background image
+    document.getElementById('backgroundImage').addEventListener('change', function(event) {
+      const file = event.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          document.body.style.backgroundImage = `url(${e.target.result})`;
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+
+    // Initial load of notes when the page is opened
+    loadAllNotes();
+  </script>
+
+</body>
+</html>
